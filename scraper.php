@@ -1,4 +1,5 @@
 <?php
+require 'scraperwiki.php';
 require 'scraperwiki/simple_html_dom.php'; 
 
 $startProductId = scraperwiki::get_var("currentId", -1);
@@ -13,7 +14,7 @@ else
 }
 
 scraperwiki::attach("hobbyking_batteryidlist");
-$batteries = scraperwiki::select("id from hobbyking_batteryidlist.swdata where id > $startProductId order by id asc");
+$batteries = scraperwiki::select("id from hobbyking_batteryidlist.data where id > $startProductId order by id asc");
 $remainingCount = count($batteries);
 
 print "Found $remainingCount batteries left to be scraped.";
