@@ -1,94 +1,88 @@
-<?php
+<?PHP
 require 'scraperwiki.php';
-require 'scraperwiki/simple_html_dom.php'; 
+require 'scraperwiki/simple_html_dom.php';
 
-$startProductId = scraperwiki::get_var("currentId", -1);
+function _log($str) { echo $str."\n"; }
+
+$startProductId = scraperwiki::get_var('currentId', -1);
 
 if($startProductId == -1)
-{
-    print "No previous saved position found. Starting from scratch.";
-}
+    _log('No previous saved position found. Starting from scratch.');
 else
-{
-    print "Resuming from product id $startProductId\n";
-}
+    _log('Resuming from product id' . $startProductId);
 
-scraperwiki::attach("hobbyking_batteryidlist");
-$batteries = scraperwiki::select("id from hobbyking_batteryidlist.data where id > $startProductId order by id asc");
+$morph_api_url = 'https://api.morph.io/LoveMHz/hobbyking_batteryidlist/data.json';
+$morph_api_key = 'pLuYLEML5w7jsPUCMi9x';
+
+$response = file_get_contents($morph_api_url.'?key='.$morph_api_key.'&query='.urlencode("select * from 'data' where id > $startProductId order by id asc"));
+$batteries = json_decode($response, true);
+
 $remainingCount = count($batteries);
 
-print "Found $remainingCount batteries left to be scraped.";
+_log('Found ' . $remainingCount . ' batteries left to be scraped.');
 
 $maxPerRun = 100;
 $loopCount = 0;
 
-foreach($batteries as $bat)
-{
-    if ($loopCount > $maxPerRun)
-    {
-        print "Ending run after $maxPerRun iterations.";
+foreach($batteries as $bat) {
+    if($loopCount > $maxPerRun) {
+        _log('Ending run after ' . $maxPerRun . ' iterations.');
         break;
     }
 
     $productId = $bat['id'];
-    print "Retrieving " . $productId . "\n";
-    $html = scraperWiki::scrape("http://www.hobbyking.com/hobbyking/store/uh_viewItem.asp?idProduct=$productId");
-    //print $html . "\n";
-    
+    _log('Retrieving ' . $productId);
+	
+    $html = scraperWiki::scrape('http://www.hobbyking.com/hobbyking/store/uh_viewItem.asp?idProduct=' . $productId);
+
     $dom = new simple_html_dom(); 
     $dom->load($html); 
     
-    // Get the product data (located in a span tag). Should only be one product data area!
-    $productDataAreasDom = $dom->find("SPAN[id=prodDataArea]");
+    /* Get the product data (located in a span tag). Should only be one product data area! */
+    $productDataAreasDom = $dom->find('SPAN[id=prodDataArea_' . $productId . ']');
     $productDataDom = $productDataAreasDom[0];
-    //print $productData . "\n"; 
-    
+
     $data = array();
     
-    // Loop over each row in the product data.
-    foreach ($productDataDom->find("tr") as $tr)
-    {
-        // Get the columns for this row of info.
-        $columns = $tr->find("td");
+    /* Loop over each row in the product data. */
+    foreach ($productDataDom->find('tr') as $tr) {
+        /* Get the columns for this row of info. */
+        $columns = $tr->find('td');
     
         $attribute = $columns[0]->plaintext;
         $value = intval($columns[1]->plaintext);    
     
-        // Some rows are empty, and we should exclude them.
-        if (strlen($attribute) > 0)
-        {
-            //print $attribute . ": ";
-            //print $value . "\n";
-            $data["id"] = $productId;
+        /* Some rows are empty, and we should exclude them. */
+        if (strlen($attribute) > 0) {
+            $data['id'] = $productId;
             $data[$attribute] = $value;
         }
     }
 
-    // Get the price.
-    $priceDom = $dom->find("td[background*=add_cart_bgd02.jpg]");
-    $price = floatval(str_replace('$', "", $priceDom[0]->plaintext));
-    $data["price"] = $price;
+    /* Get the price. */
+    $priceDom = $dom->find('#price_lb');
+    $price = floatval(str_replace('$', '', $priceDom[0]->plaintext));
+    $data['price'] = $price;
 
-    // Calculate out a few extra fields:
-    $cells = $data["Config(s)"];
-    $capacity = $data["Capacity(mAh)"];
+    /* Calculate out a few extra fields: */
+    $cells = $data['Config (s)'];
+    $capacity = $data['Capacity(mAh)'];
     $energy = $cells * 3.7 * $capacity / 1000;
     $value = $energy / $price;
 
-    $data["Energy (Wh)"] = $energy;
-    $data["Value (Wh/$)"] = $value;
+    $data['Energy (Wh)']  = $energy;
+    $data['Value (Wh/$)'] = $value;
+	
+    $data['Amp Limit'] = $data['Discharge (c)'] * ($data['Capacity(mAh)'] / 1000);
 
-    //print_r($data);
-    scraperwiki::save(array("id"), $data);
-    scraperwiki::save_var("currentId", $productId);
+    scraperwiki::save(['id'], $data);
+    scraperwiki::save_var('currentId', $productId);
     $loopCount++;
 }
 
-// Check to see if we have scraped everything - if so, start again!
+/* Check to see if we have scraped everything - if so, start again! */
 $lastBattery = end($batteries);
-if($lastBattery['id'] == $productId)
-{
-    print "All known batteries processed. Clearing progress marker so scraper can start again.";
-    scraperwiki::save_var("currentId", -1);
+if($lastBattery['id'] == $productId) {
+    _log('All known batteries processed. Clearing progress marker so scraper can start again.');
+    scraperwiki::save_var('currentId', -1);
 }
-?>
