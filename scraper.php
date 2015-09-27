@@ -76,19 +76,19 @@ foreach($batteries as $bat) {
     $data['Amp Limit'] = $data['Discharge (c)'] * ($data['Capacity(mAh)'] / 1000);
 
     scraperwiki::save(['id'], [
-		['id']			 => $data['id'],
-		['capacity']	 => $data['Capacity(mAh)'],
-		['config']		 => $data['Config (s)'],
-		['discharge']	 => $data['Discharge (c)'],
-		['weight']		 => $data['Weight (g)'],
-		['charge_rate']	 => $data['Max Charge Rate (C)'],
-		['length']		 => $data['Length-A(mm)'],
-		['height']		 => $data['Height-B(mm)'],
-		['width']		 => $data['Width-C(mm)'],
-		['price']		 => $data['price'],
-		['energy']		 => $data['Energy (Wh)'],
-		['energy_value'] => $data['Value (Wh/$)'],
-		['amp_limit']	 => $data['Amp Limit']
+		'id'           => $data['id'],
+		'capacity'     => $data['Capacity(mAh)'],
+		'config'       => $data['Config (s)'],
+		'discharge'	   => $data['Discharge (c)'],
+		'weight'	   => $data['Weight (g)'],
+		'charge_rate'  => $data['Max Charge Rate (C)'],
+		'length'	   => $data['Length-A(mm)'],
+		'height'	   => $data['Height-B(mm)'],
+		'width'		   => $data['Width-C(mm)'],
+		'price'		   => $data['price'],
+		'energy'	   => $data['Energy (Wh)'],
+		'energy_value' => $data['Value (Wh/$)'],
+		'amp_limit'    => $data['Amp Limit']
 	]);
     scraperwiki::save_var('currentId', $productId);
     $loopCount++;
